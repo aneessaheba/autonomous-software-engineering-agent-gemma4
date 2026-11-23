@@ -27,6 +27,20 @@ SKIP_DIRS = {
 TEST_DIRS = {"tests", "test", "testing"}
 MAX_FILE_BYTES = 600_000
 K1, B = 1.2, 0.75
+# Fixes rarely land in documentation, examples or tooling, so files there are
+# kept in the ranking but scored lower. Measured on the public tasks: file hit@5
+# rises from 64.8% to 73.4% with this prior (see results/localization.md).
+PERIPHERAL_DIRS = {
+    "docs",
+    "doc",
+    "docs_src",
+    "examples",
+    "example",
+    "benchmarks",
+    "scripts",
+    "tools",
+}
+PERIPHERAL_FACTOR = 0.5
 
 STOPWORDS = frozenset(
     """
@@ -238,7 +252,7 @@ class Index:
             scores[i] = total
         return scores
 
-    def rank(self, query, top_files=8, per_file=3):
+    def rank(self, query, top_files=8, per_file=3, peripheral=PERIPHERAL_FACTOR):
         """Return ``[(path, file_score, [(qualname, start, end, score), ...]), ...]``."""
         scores = self.score_chunks(query)
         by_file = {}
@@ -250,6 +264,8 @@ class Index:
             hits.sort(reverse=True)
             # Best chunk dominates; further strong chunks in the same file add evidence.
             file_score = hits[0][0] + 0.3 * sum(s for s, _ in hits[1:3])
+            if path.split("/")[0] in PERIPHERAL_DIRS:
+                file_score *= peripheral
             symbols = [
                 (self.chunks[i][1], self.chunks[i][2], self.chunks[i][3], round(s, 2))
                 for s, i in hits[:per_file]
