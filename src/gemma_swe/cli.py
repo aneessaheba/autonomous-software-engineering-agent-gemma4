@@ -35,6 +35,22 @@ def _cmd_stats(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_localize(args: argparse.Namespace) -> int:
+    from gemma_swe.analysis.localization import evaluate, summarise, to_markdown
+    from gemma_swe.tasks import load_tasks
+
+    rows = evaluate(load_tasks(args.tasks), workers=args.workers)
+    summary = summarise(rows)
+    RESULTS_DIR.mkdir(exist_ok=True)
+    (RESULTS_DIR / "localization.json").write_text(json.dumps(summary, indent=2) + "\n")
+    (RESULTS_DIR / "localization.md").write_text(to_markdown(summary))
+    if args.per_task:
+        with open(args.per_task, "w") as fh:
+            fh.writelines(json.dumps(r) + "\n" for r in rows)
+    print(to_markdown(summary))
+    return 0
+
+
 def _cmd_validate(args: argparse.Namespace) -> int:
     from gemma_swe.submission import validate
 
@@ -78,6 +94,12 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("stats", help="Descriptive statistics for the public tasks")
     p.add_argument("--tasks", default=str(DATA_DIR / "tasks.jsonl"))
     p.set_defaults(func=_cmd_stats)
+
+    p = sub.add_parser("localize", help="Evaluate fault localization on the public tasks")
+    p.add_argument("--tasks", default=str(DATA_DIR / "tasks.jsonl"))
+    p.add_argument("--workers", type=int, default=8)
+    p.add_argument("--per-task", help="Also write per-task rows to this JSONL file")
+    p.set_defaults(func=_cmd_localize)
 
     p = sub.add_parser("validate", help="Validate a submission directory")
     p.add_argument("submission_dir", nargs="?", default="submission")
