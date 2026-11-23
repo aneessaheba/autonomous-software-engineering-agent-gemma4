@@ -47,7 +47,10 @@ def mentions_module_stem(task: Task, path: str) -> bool:
     stem = PurePosixPath(path).stem
     if stem in {"__init__", "main", "utils", "base"} or len(stem) < 4:
         return False
-    return re.search(rf"(?<![A-Za-z0-9_]){re.escape(stem)}(?![A-Za-z0-9_])", task.problem_statement) is not None
+    return (
+        re.search(rf"(?<![A-Za-z0-9_]){re.escape(stem)}(?![A-Za-z0-9_])", task.problem_statement)
+        is not None
+    )
 
 
 def compute_stats(tasks: list[Task]) -> dict:
@@ -88,7 +91,13 @@ def compute_stats(tasks: list[Task]) -> dict:
     for a, r in zip(added, removed, strict=True):
         changed = a + r
         bucket = (
-            "1-5" if changed <= 5 else "6-20" if changed <= 20 else "21-100" if changed <= 100 else ">100"
+            "1-5"
+            if changed <= 5
+            else "6-20"
+            if changed <= 20
+            else "21-100"
+            if changed <= 100
+            else ">100"
         )
         size_buckets[bucket] += 1
 
@@ -115,9 +124,7 @@ def compute_stats(tasks: list[Task]) -> dict:
 
 def to_markdown(stats: dict) -> str:
     def row(label: str, q: dict) -> str:
-        return (
-            f"| {label} | {q['median']:g} | {q['mean']:g} | {q['p75']:g} | {q['p90']:g} | {q['max']:g} |"
-        )
+        return f"| {label} | {q['median']:g} | {q['mean']:g} | {q['p75']:g} | {q['p90']:g} | {q['max']:g} |"
 
     lines = [
         "# Public task set: descriptive statistics",

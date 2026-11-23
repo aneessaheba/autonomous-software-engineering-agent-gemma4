@@ -45,10 +45,7 @@ def parse_patch(patch: str) -> list[FileDiff]:
     """
     diffs: list[FileDiff] = []
     # Split at each "--- " header that is immediately followed by a "+++ " header.
-    starts = [
-        m.start()
-        for m in re.finditer(r"^--- \S+.*\n\+\+\+ \S+", patch, flags=re.MULTILINE)
-    ]
+    starts = [m.start() for m in re.finditer(r"^--- \S+.*\n\+\+\+ \S+", patch, flags=re.MULTILINE)]
     for i, start in enumerate(starts):
         chunk = patch[start : starts[i + 1] if i + 1 < len(starts) else len(patch)]
         new = _FILE_HEADER.search(chunk)
