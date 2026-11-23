@@ -63,7 +63,8 @@ def _fetch(api, name: str, size: int, dest_root: Path) -> str:
     if target.exists() and target.stat().st_size == size:
         return "cached"
     target.parent.mkdir(parents=True, exist_ok=True)
-    api.competition_download_file(COMPETITION, name, path=str(target.parent), quiet=True)
+    # The API recreates the file's directory under ``path``, so pass the root.
+    api.competition_download_file(COMPETITION, name, path=str(dest_root), quiet=True)
     # Kaggle zips some large files on download; unpack so the layout stays uniform.
     zipped = target.with_name(target.name + ".zip")
     if zipped.exists():
