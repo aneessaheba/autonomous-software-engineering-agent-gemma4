@@ -14,7 +14,10 @@ from __future__ import annotations
 
 import hashlib
 import re
+import shutil
+import tempfile
 import zipfile
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -50,6 +53,7 @@ MAX_CONTEXT_TOKENS = 32_768
 # instruction raises KeyError at run time and fails the task.
 SESSION_STATE_VARS = frozenset({"problem_description", "hints"})
 _TEMPLATE = re.compile(r"{+[^{}]*}+")
+_KEBAB = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 # Fixed timestamp so the same config always produces a byte-identical archive.
 _ZIP_EPOCH = (2026, 1, 1, 0, 0, 0)
 
@@ -200,6 +204,21 @@ def _structural_checks(submission_dir: Path, report: ValidationReport) -> None:
         for required in ("adapter_config.json", "adapter_model.safetensors"):
             if not (adir / required).is_file():
                 report.errors.append(f"Adapter {adapter!r} is missing {required}")
+    skill_dirs = sorted({s for a, _ in agents for s in (a.get("skills") or [])})
+    for rel in skill_dirs:
+        manifest = submission_dir / rel / "SKILL.md"
+        if not manifest.is_file():
+            report.errors.append(f"Skill {rel!r} has no SKILL.md")
+            continue
+        text = manifest.read_text(encoding="utf-8")
+        front = yaml.safe_load(text.split("---")[1]) if text.startswith("---") else None
+        if not isinstance(front, dict) or front.get("name") != Path(rel).name:
+            report.errors.append(f"Skill {rel!r}: frontmatter name must equal the directory name")
+        elif not _KEBAB.fullmatch(front["name"]):
+            # ADK only accepts snake_case skill names behind a feature flag.
+            report.errors.append(f"Skill {rel!r}: name must be lowercase kebab-case")
+        elif not str(front.get("description") or "").strip():
+            report.errors.append(f"Skill {rel!r}: frontmatter description is empty")
     if "submit_patch" not in tools:
         report.warnings.append("No agent declares submit_patch; only the fallback diff is graded")
 
@@ -209,6 +228,7 @@ def _structural_checks(submission_dir: Path, report: ValidationReport) -> None:
         n_agents=len(agents),
         tools=sorted(tools),
         adapters=sorted(adapters),
+        skills=skill_dirs,
         instruction_chars=sum(len(str(a.get("instruction") or "")) for a, _ in agents),
     )
 
@@ -270,29 +290,46 @@ def _harness_checks(submission_dir: Path, report: ValidationReport) -> None:
     report.info["harness_compile"] = f"ok ({type(agent).__name__} {agent.name!r})"
 
 
+_STAGE_IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store", ".ipynb_checkpoints")
+
+
+@contextmanager
+def staged(submission_dir: str | Path):
+    """Yield a clean copy of the submission, as it will appear inside the zip.
+
+    Local tooling leaves ``__pycache__`` and ``.DS_Store`` behind; the scorer
+    rejects those extensions, so every check and the archive use this copy.
+    """
+    with tempfile.TemporaryDirectory(prefix="submission_") as tmp:
+        dest = Path(tmp) / "submission"
+        shutil.copytree(submission_dir, dest, ignore=_STAGE_IGNORE, symlinks=True)
+        yield dest
+
+
 def validate(submission_dir: str | Path, *, use_harness: bool = True) -> ValidationReport:
-    submission_dir = Path(submission_dir)
     report = ValidationReport()
-    if not submission_dir.is_dir():
+    if not Path(submission_dir).is_dir():
         report.errors.append(f"Not a directory: {submission_dir}")
         return report
-    _structural_checks(submission_dir, report)
-    if use_harness and report.ok:
-        _harness_checks(submission_dir, report)
+    with staged(submission_dir) as clean:
+        _structural_checks(clean, report)
+        if use_harness and report.ok:
+            _harness_checks(clean, report)
     return report
 
 
 def package(submission_dir: str | Path, out_path: str | Path) -> dict:
     """Write a deterministic ``submission.zip`` with the root config at archive root."""
-    submission_dir, out_path = Path(submission_dir), Path(out_path)
+    out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    files = sorted(
-        p for p in submission_dir.rglob("*") if p.is_file() and "__pycache__" not in p.parts
-    )
     digest = hashlib.sha256()
-    with zipfile.ZipFile(out_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        for path in files:
-            arcname = path.relative_to(submission_dir).as_posix()
+    with (
+        staged(submission_dir) as clean,
+        zipfile.ZipFile(out_path, "w", zipfile.ZIP_DEFLATED) as zf,
+    ):
+        files = sorted(p for p in clean.rglob("*") if p.is_file())
+        names = [p.relative_to(clean).as_posix() for p in files]
+        for path, arcname in zip(files, names, strict=True):
             data = path.read_bytes()
             info = zipfile.ZipInfo(arcname, date_time=_ZIP_EPOCH)
             info.compress_type = zipfile.ZIP_DEFLATED
@@ -301,7 +338,7 @@ def package(submission_dir: str | Path, out_path: str | Path) -> dict:
             digest.update(arcname.encode() + b"\0" + data + b"\0")
     return {
         "path": str(out_path),
-        "files": [p.relative_to(submission_dir).as_posix() for p in files],
+        "files": names,
         "zip_bytes": out_path.stat().st_size,
         "content_sha256": digest.hexdigest(),
     }
