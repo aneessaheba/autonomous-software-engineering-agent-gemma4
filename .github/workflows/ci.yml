@@ -14,9 +14,8 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install
-        run: |
-          uv venv
-          uv pip install -e ".[dev]" "google-adk==1.36.1"
+        # setup-uv already creates and activates .venv
+        run: uv pip install -e ".[dev]" "google-adk==1.36.1"
       - name: Lint
         run: uv run ruff check src tests agents
       - name: Test
