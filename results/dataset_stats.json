@@ -1,0 +1,71 @@
+{
+  "n_tasks": 129,
+  "tasks_per_repo": {
+    "fastapi/fastapi": 67,
+    "Textualize/rich": 48,
+    "psf/requests": 13,
+    "encode/httpx": 1
+  },
+  "tasks_per_year": {
+    "2023": 10,
+    "2024": 21,
+    "2025": 48,
+    "2026": 50
+  },
+  "with_hints": 0,
+  "problem_statement_chars": {
+    "min": 42.0,
+    "median": 418.0,
+    "mean": 803.6,
+    "p75": 1000.0,
+    "p90": 1891.0,
+    "max": 10095.0
+  },
+  "gold_source_files_per_task": {
+    "min": 1.0,
+    "median": 1.0,
+    "mean": 2.2,
+    "p75": 2.0,
+    "p90": 4.0,
+    "max": 26.0
+  },
+  "gold_lines_added": {
+    "min": 0.0,
+    "median": 8.0,
+    "mean": 138.6,
+    "p75": 31.0,
+    "p90": 102.0,
+    "max": 12170.0
+  },
+  "gold_lines_removed": {
+    "min": 0.0,
+    "median": 2.0,
+    "mean": 29.2,
+    "p75": 8.0,
+    "p90": 24.0,
+    "max": 1855.0
+  },
+  "changed_lines_buckets": {
+    "1-5": 43,
+    "6-20": 38,
+    "21-100": 32,
+    ">100": 16
+  },
+  "single_source_file_pct": 70.5,
+  "creates_new_file_pct": 8.5,
+  "touches_non_python_pct": 0.0,
+  "issue_names_gold_file_pct": 7.8,
+  "issue_names_gold_module_stem_pct": 15.5,
+  "tasks_without_source_change": 0,
+  "gold_file_extensions": {
+    ".py": 278
+  },
+  "gold_top_level_dirs": {
+    "fastapi/fastapi": 129,
+    "rich/rich": 91,
+    "fastapi/docs_src": 34,
+    "requests/src": 15,
+    "httpx/src": 7,
+    "fastapi/scripts": 2
+  }
+}
