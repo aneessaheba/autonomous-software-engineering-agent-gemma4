@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          uv venv
+          uv pip install -e ".[dev]" "google-adk==1.36.1"
+      - name: Lint
+        run: uv run ruff check src tests agents
+      - name: Test
+        # Tests that need the organisers' harness wheels skip themselves here.
+        run: uv run pytest -q
