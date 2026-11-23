@@ -51,6 +51,30 @@ def _cmd_localize(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_report(args: argparse.Namespace) -> int:
+    from gemma_swe.analysis import run_report
+
+    runs = {Path(d).name: run_report.load_rows(d) for d in args.results_dirs}
+    out = []
+    for name, rows in runs.items():
+        summary = run_report.summarise(rows)
+        (Path("runs") / name / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+        out.append(run_report.to_markdown(name, summary))
+    names = list(runs)
+    for other in names[1:]:
+        cmp = run_report.compare(runs[names[0]], runs[other])
+        out.append(
+            f"### {other} vs {names[0]} on {cmp['n_shared']} shared tasks\n\n"
+            f"{cmp['other_resolved']} vs {cmp['base_resolved']} resolved; "
+            f"gained {len(cmp['gained'])}, lost {len(cmp['lost'])}, net {cmp['net']:+d}.\n"
+        )
+    text = "\n".join(out)
+    if args.out:
+        Path(args.out).write_text(text)
+    print(text)
+    return 0
+
+
 def _cmd_validate(args: argparse.Namespace) -> int:
     from gemma_swe.submission import validate
 
@@ -100,6 +124,11 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--workers", type=int, default=8)
     p.add_argument("--per-task", help="Also write per-task rows to this JSONL file")
     p.set_defaults(func=_cmd_localize)
+
+    p = sub.add_parser("report", help="Summarise and compare local evaluation runs")
+    p.add_argument("results_dirs", nargs="+", help="Run directories; the first is the base")
+    p.add_argument("--out", help="Write the markdown report here")
+    p.set_defaults(func=_cmd_report)
 
     p = sub.add_parser("validate", help="Validate a submission directory")
     p.add_argument("submission_dir", nargs="?", default="agents/locate")
