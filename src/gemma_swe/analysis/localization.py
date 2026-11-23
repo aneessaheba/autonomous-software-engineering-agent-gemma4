@@ -5,7 +5,7 @@ the reference fix edits near the top? The answer bounds how much exploration
 budget the agent needs, and tells us whether shipping a localization script as
 a skill is worth a tool call.
 
-Three methods are compared on identical inputs (the task's ``*.py`` files at
+Four methods are compared on identical inputs (the task's ``*.py`` files at
 ``base_commit``, tests excluded):
 
 * ``ident_grep``  what a careful agent does by hand with ``git grep``: take the
@@ -13,7 +13,9 @@ Three methods are compared on identical inputs (the task's ``*.py`` files at
                   IDF-weighted number of distinct identifiers they contain.
 * ``bm25_file``   BM25 with one document per file and the whole issue as query.
 * ``locate``      the script shipped in ``agents/locate/skills/repo-locate``:
-                  BM25 over function/class chunks with symbol and path boosts.
+                  BM25 over function/class chunks with symbol and path boosts,
+                  plus a prior that ranks docs, examples and tooling lower.
+                  ``locate_no_prior`` is the same ranker without that prior.
 
 Gold labels come from the reference ``patch``. Files the patch creates cannot
 be localized, so tasks whose fix only adds new files are reported separately.
@@ -34,7 +36,7 @@ from gemma_swe.worktrees import extract_python_tree
 
 LOCATE_SCRIPT = Path("agents/locate/skills/repo-locate/scripts/locate.py")
 KS = (1, 3, 5, 10)
-METHODS = ("ident_grep", "bm25_file", "locate")
+METHODS = ("ident_grep", "bm25_file", "locate_no_prior", "locate")
 
 
 def load_locate(script: Path = LOCATE_SCRIPT):
@@ -117,9 +119,11 @@ def evaluate_task(task: Task) -> dict | None:
 
     index = locate.Index(str(root))
     located = index.rank(task.problem_statement, top_files=max(KS), per_file=3)
+    no_prior = index.rank(task.problem_statement, top_files=max(KS), peripheral=1.0)
     rankings = {
         "ident_grep": rank_ident_grep(locate, files, task.problem_statement),
         "bm25_file": rank_bm25_file(locate, files, task.problem_statement),
+        "locate_no_prior": [path for path, _, _ in no_prior],
         "locate": [path for path, _, _ in located],
     }
     for method, ranking in rankings.items():
@@ -195,7 +199,8 @@ def to_markdown(summary: dict) -> str:
     labels = {
         "ident_grep": "Identifier grep (manual `git grep` strategy)",
         "bm25_file": "BM25, one document per file",
-        "locate": "`repo-locate` skill (chunk BM25 + boosts)",
+        "locate_no_prior": "Chunk BM25 (ablation: no directory prior)",
+        "locate": "`repo-locate` skill as shipped (chunk BM25 + directory prior)",
     }
     lines = [
         "# Fault localization from issue text",
