@@ -7,7 +7,7 @@ prints the best files with the line ranges worth reading first.
 
 Usage:
     locate.py "issue keywords, identifiers, error messages"
-    locate.py --top 8 --root /workspace "query"
+    locate.py --top 8 --include-tests "query"
 """
 
 import argparse
@@ -113,7 +113,12 @@ def list_python_files(root, include_tests=False):
                     paths.append(os.path.relpath(os.path.join(dirpath, name), root))
     kept = []
     for path in sorted(set(p.replace(os.sep, "/") for p in paths)):
-        if any(part in SKIP_DIRS for part in path.split("/")):
+        parts = path.split("/")
+        if any(part in SKIP_DIRS for part in parts):
+            continue
+        # Hidden files include the harness's own temporary ``.adk_exec_*.py`` wrapper,
+        # which embeds this script and would otherwise match every query.
+        if parts[-1].startswith("."):
             continue
         if not include_tests and is_test_path(path):
             continue
@@ -254,6 +259,30 @@ class Index:
         return ranked[:top_files]
 
 
+def default_root():
+    """Find the repository when launched through the harness's skill wrapper.
+
+    The wrapper changes directory to a temporary folder before running this
+    script, and the subprocess sandbox does not mount the repository at
+    ``/workspace``. The wrapper keeps the original directory in a local named
+    ``_orig_cwd``, and the shell leaves it in ``PWD``; prefer whichever of those
+    is a git work tree.
+    """
+    candidates = []
+    frame = sys._getframe()
+    while frame is not None:
+        orig = frame.f_locals.get("_orig_cwd")
+        if isinstance(orig, str):
+            candidates.append(orig)
+        frame = frame.f_back
+    candidates += [os.environ.get("PWD") or "", "/workspace", os.getcwd()]
+    existing = [c for c in candidates if c and os.path.isdir(c)]
+    for cand in existing:
+        if os.path.exists(os.path.join(cand, ".git")):
+            return cand
+    return existing[0] if existing else "."
+
+
 def format_text(ranked):
     if not ranked:
         return "No matching code found. Try different identifiers from the issue."
@@ -268,7 +297,7 @@ def format_text(ranked):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("query", nargs="*", help="Issue keywords and identifiers")
-    parser.add_argument("--root", default="/workspace")
+    parser.add_argument("--root", default=None, help="Repository root (auto-detected)")
     parser.add_argument("--top", type=int, default=8)
     parser.add_argument("--include-tests", action="store_true")
     parser.add_argument("--json", action="store_true")
@@ -279,7 +308,8 @@ def main(argv=None):
     if not query.strip():
         print("Usage: locate.py 'keywords and identifiers from the issue'")
         return 0
-    ranked = Index(args.root, args.include_tests).rank(query, top_files=args.top)
+    root = args.root or default_root()
+    ranked = Index(root, args.include_tests).rank(query, top_files=args.top)
     if args.json:
         print(json.dumps([{"path": p, "score": s, "symbols": sym} for p, s, sym in ranked]))
     else:
