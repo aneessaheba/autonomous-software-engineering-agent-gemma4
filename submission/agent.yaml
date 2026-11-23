@@ -1,0 +1,14 @@
+# Root agent for the Gemma 4 Developer Agent Competition.
+# Compiled by adk-submission into a Google ADK LlmAgent; no Python is executed.
+name: swe_agent
+model: gemma-4-31b-it-qat-w4a16-ct
+description: Single-agent issue resolver that localises, edits, verifies and submits.
+instruction: !include prompts/system.md
+tools:
+  - run_command
+  - read_file
+  - edit_file
+  - write_file
+  - get_status
+  - submit_patch
+generate_content_config: !include configs/sampling.yaml

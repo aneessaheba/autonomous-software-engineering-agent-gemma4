@@ -1,0 +1,8 @@
+# Low temperature for reproducible edits. Output is capped well below the
+# 32,768-token context so a long thought cannot truncate the tool call after it.
+temperature: 0.2
+top_p: 0.95
+max_output_tokens: 8192
+thinking_config:
+  thinking_budget: 4096
+  include_thoughts: true
