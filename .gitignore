@@ -1,0 +1,38 @@
+# Competition data: the rules forbid redistributing it, so it never enters git.
+data/
+vendor/
+
+# Model weights and training outputs
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.gguf
+checkpoints/
+outputs/
+wandb/
+
+# Local evaluation runs (curated summaries live in results/)
+runs/
+dist/
+*.zip
+*.parquet
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Secrets and local config
+.env
+kaggle.json
+.claude/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
