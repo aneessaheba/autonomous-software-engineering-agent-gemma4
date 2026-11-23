@@ -12,7 +12,7 @@ Three methods are compared on identical inputs (the task's ``*.py`` files at
                   code identifiers from the issue and rank files by the
                   IDF-weighted number of distinct identifiers they contain.
 * ``bm25_file``   BM25 with one document per file and the whole issue as query.
-* ``locate``      the script shipped in ``submission/skills/repo_locate``:
+* ``locate``      the script shipped in ``agents/locate/skills/repo-locate``:
                   BM25 over function/class chunks with symbol and path boosts.
 
 Gold labels come from the reference ``patch``. Files the patch creates cannot
@@ -24,6 +24,7 @@ from __future__ import annotations
 import importlib.util
 import math
 import os
+import sys
 from collections import Counter
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -31,7 +32,7 @@ from pathlib import Path
 from gemma_swe.tasks import Task, is_test_path
 from gemma_swe.worktrees import extract_python_tree
 
-LOCATE_SCRIPT = Path("submission/skills/repo_locate/scripts/locate.py")
+LOCATE_SCRIPT = Path("agents/locate/skills/repo-locate/scripts/locate.py")
 KS = (1, 3, 5, 10)
 METHODS = ("ident_grep", "bm25_file", "locate")
 
@@ -39,7 +40,12 @@ METHODS = ("ident_grep", "bm25_file", "locate")
 def load_locate(script: Path = LOCATE_SCRIPT):
     spec = importlib.util.spec_from_file_location("repo_locate", script)
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    # Importing must not leave a __pycache__ inside the submission directory.
+    previous, sys.dont_write_bytecode = sys.dont_write_bytecode, True
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.dont_write_bytecode = previous
     return module
 
 
@@ -189,7 +195,7 @@ def to_markdown(summary: dict) -> str:
     labels = {
         "ident_grep": "Identifier grep (manual `git grep` strategy)",
         "bm25_file": "BM25, one document per file",
-        "locate": "`repo_locate` skill (chunk BM25 + boosts)",
+        "locate": "`repo-locate` skill (chunk BM25 + boosts)",
     }
     lines = [
         "# Fault localization from issue text",

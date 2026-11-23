@@ -6,7 +6,8 @@ import pytest
 from gemma_swe.submission import package, unknown_template_vars, validate
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SUBMISSION = REPO_ROOT / "submission"
+AGENTS = sorted(p for p in (REPO_ROOT / "agents").iterdir() if p.is_dir())
+SUBMISSION = REPO_ROOT / "agents" / "locate"
 
 
 def _write_minimal(root: Path, **overrides) -> Path:
@@ -28,25 +29,42 @@ def _write_minimal(root: Path, **overrides) -> Path:
     return root
 
 
-def test_shipped_submission_is_structurally_valid():
-    report = validate(SUBMISSION, use_harness=False)
+@pytest.mark.parametrize("agent_dir", AGENTS, ids=lambda p: p.name)
+def test_shipped_agent_is_structurally_valid(agent_dir):
+    report = validate(agent_dir, use_harness=False)
     assert report.ok, report.errors
     assert report.info["model"] == "gemma-4-31b-it-qat-w4a16-ct"
     assert "submit_patch" in report.info["tools"]
 
 
-def test_shipped_submission_compiles_under_official_harness():
+@pytest.mark.parametrize("agent_dir", AGENTS, ids=lambda p: p.name)
+def test_shipped_agent_compiles_under_official_harness(agent_dir):
     pytest.importorskip("adk_submission")
     pytest.importorskip("swegemma")
-    report = validate(SUBMISSION, use_harness=True)
+    report = validate(agent_dir, use_harness=True)
     assert report.ok, report.errors
     assert report.info["harness_compile"].startswith("ok")
 
 
-def test_shipped_prompt_pins_the_issue_text():
-    prompt = (SUBMISSION / "prompts" / "system.md").read_text()
+@pytest.mark.parametrize("agent_dir", AGENTS, ids=lambda p: p.name)
+def test_shipped_prompt_pins_the_issue_text(agent_dir):
+    prompt = (agent_dir / "prompts" / "system.md").read_text()
     assert "{problem_description}" in prompt
     assert unknown_template_vars(prompt) == []
+
+
+def test_stray_bytecode_does_not_invalidate_or_ship(tmp_path):
+    import shutil
+
+    work = tmp_path / "agent"
+    shutil.copytree(SUBMISSION, work, ignore=shutil.ignore_patterns("__pycache__"))
+    cache = work / "skills" / "repo-locate" / "scripts" / "__pycache__"
+    cache.mkdir()
+    (cache / "locate.cpython-312.pyc").write_bytes(b"\0")
+    assert validate(work, use_harness=False).ok
+    manifest = package(work, tmp_path / "s.zip")
+    assert not any("__pycache__" in name for name in manifest["files"])
+    assert "skills/repo-locate/SKILL.md" in manifest["files"]
 
 
 @pytest.mark.parametrize(
@@ -101,3 +119,12 @@ def test_package_is_deterministic_with_root_config_at_archive_root(tmp_path):
     with zipfile.ZipFile(tmp_path / "a.zip") as zf:
         assert "agent.yaml" in zf.namelist()
         assert zf.testzip() is None
+
+
+def test_rejects_snake_case_skill_name(tmp_path):
+    _write_minimal(tmp_path, skills=["skills/my_skill"])
+    skill = tmp_path / "skills" / "my_skill"
+    skill.mkdir(parents=True)
+    (skill / "SKILL.md").write_text("---\nname: my_skill\ndescription: d\n---\nbody\n")
+    report = validate(tmp_path, use_harness=False)
+    assert any("kebab-case" in e for e in report.errors)

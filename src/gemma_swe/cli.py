@@ -102,12 +102,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=_cmd_localize)
 
     p = sub.add_parser("validate", help="Validate a submission directory")
-    p.add_argument("submission_dir", nargs="?", default="submission")
+    p.add_argument("submission_dir", nargs="?", default="agents/locate")
     p.add_argument("--no-harness", action="store_true", help="Skip official harness checks")
     p.set_defaults(func=_cmd_validate)
 
     p = sub.add_parser("package", help="Validate, then write submission.zip")
-    p.add_argument("submission_dir", nargs="?", default="submission")
+    p.add_argument("submission_dir", nargs="?", default="agents/locate")
     p.add_argument("--out", default="dist/submission.zip")
     p.add_argument("--no-harness", action="store_true")
     p.set_defaults(func=_cmd_package)
