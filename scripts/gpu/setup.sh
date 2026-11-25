@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# One-time setup of a Linux CUDA machine (tested target: a single RTX 5090, 32 GB)
+# One-time setup of a Linux CUDA machine (intended target: a single RTX 5090, 32 GB)
 # for local evaluation and LoRA training. Run from the repository root.
+# Works on bare Linux and inside a Linux container (see docs/lab-runbook.md).
 #
 # Requires: NVIDIA driver with CUDA 12.8 support, uv, and Kaggle API credentials
 # in ~/.kaggle (the account must have accepted the competition rules).
@@ -10,13 +11,21 @@ MODEL="${MODEL:-gemma-4-31b-it-qat-w4a16-ct}"
 MODEL_VERSION="${MODEL_VERSION:-2}"
 WHEELHOUSE="vendor/wheelhouse"
 
-command -v uv >/dev/null || { echo "Install uv first: https://docs.astral.sh/uv/"; exit 1; }
+# Where the virtual environment lives. Inside a Docker container whose project
+# folder is a Windows bind mount, set VENV_DIR to a path on the container's own
+# filesystem (for example /opt/venv): symlinks do not work on the mount.
+VENV_DIR="${VENV_DIR:-.venv}"
+
+# uv is fetched with pip when it is missing, so nothing needs installing by hand.
+command -v uv >/dev/null || python3 -m pip install --quiet uv \
+  || { echo "Could not install uv; see https://docs.astral.sh/uv/"; exit 1; }
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 
 # The harness requires Python >= 3.12; the scorer's wheels are built for cp312.
-uv venv --python 3.12 .venv
+# uv downloads its own Python 3.12 if the system one is older.
+uv venv --python 3.12 "$VENV_DIR"
 # shellcheck disable=SC1091
-source .venv/bin/activate
+source "$VENV_DIR/bin/activate"
 uv pip install -e ".[kaggle,dev,plots]"
 
 # 1. Organisers' wheelhouse: vLLM, transformers and the three harness packages,

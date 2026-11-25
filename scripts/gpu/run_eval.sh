@@ -13,7 +13,7 @@ RUN_NAME="${2:?usage: run_eval.sh <agent-dir> <run-name> [local_eval options]}"
 shift 2
 
 # shellcheck disable=SC1091
-source .venv/bin/activate
+source "${VENV_DIR:-.venv}/bin/activate"
 gemma-swe validate "$AGENT_DIR"
 
 RESULTS="runs/$RUN_NAME"
