@@ -128,3 +128,10 @@ def test_rejects_snake_case_skill_name(tmp_path):
     (skill / "SKILL.md").write_text("---\nname: my_skill\ndescription: d\n---\nbody\n")
     report = validate(tmp_path, use_harness=False)
     assert any("kebab-case" in e for e in report.errors)
+
+
+def test_rejects_budget_that_cannot_fit_the_runtime_limit(tmp_path):
+    _write_minimal(tmp_path)
+    (tmp_path / "eval_config.yaml").write_text("evaluation:\n  max_time_minutes: 8\n")
+    report = validate(tmp_path, use_harness=False)
+    assert any("12 h limit" in e for e in report.errors)

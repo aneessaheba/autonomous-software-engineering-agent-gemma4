@@ -49,6 +49,7 @@ ALLOWED_EXTENSIONS = frozenset({".yaml", ".yml", ".md", ".txt", ".py", ".json", 
 ROOT_CONFIG_NAMES = ("agent.yaml", "agent.yml", "root_agent.yaml", "root_agent.yml")
 MAX_TOTAL_BYTES = 3 * 1024**3
 MAX_CONTEXT_TOKENS = 32_768
+MAX_WORST_CASE_HOURS = 10.0
 # Variables the harness puts in ADK session state; any other {identifier} in an
 # instruction raises KeyError at run time and fails the task.
 SESSION_STATE_VARS = frozenset({"problem_description", "hints"})
@@ -240,9 +241,12 @@ def _structural_checks(submission_dir: Path, report: ValidationReport) -> None:
         # ~120 hidden tasks must finish in 12 h including sandbox setup.
         worst_case_hours = 120 * minutes / 60
         report.info["worst_case_hours_120_tasks"] = round(worst_case_hours, 1)
-        if worst_case_hours > 24:
-            report.warnings.append(
-                f"Worst case {worst_case_hours:.0f} h for 120 tasks is far beyond the 12 h limit"
+        # An 8-minute budget (16 h worst case) was rejected by Kaggle for exceeding
+        # the runtime limit; model start-up and sandbox setup also come out of the 12 h.
+        if worst_case_hours > MAX_WORST_CASE_HOURS:
+            report.errors.append(
+                f"max_time_minutes={minutes:g} allows {worst_case_hours:.1f} h for 120 tasks; "
+                f"keep the worst case at or below {MAX_WORST_CASE_HOURS:g} h to fit Kaggle's 12 h limit"
             )
     else:
         report.warnings.append("No eval_config.yaml: harness defaults (60 min, 100 calls) apply")
