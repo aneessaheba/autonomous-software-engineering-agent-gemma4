@@ -37,7 +37,7 @@ uv pip install --no-deps --force-reinstall "$WHEELHOUSE"/*.whl
 # 3. Competition data: everything, including the 21.5 GB of repository snapshots.
 gemma-swe download core graphs embeddings wheels snapshots
 
-# 4. Base model weights (W4A16 quantised; the 31B model is about 18 GB).
+# 4. Base model weights (W4A16 quantised; the 31B model is 23.3 GB on disk).
 mkdir -p "data/models/$MODEL"
 kaggle models instances versions download "google/gemma-4/other/$MODEL/$MODEL_VERSION" \
   -p "data/models/$MODEL" --untar
