@@ -1,0 +1,6 @@
+# Shell scripts must keep LF endings: they run inside Linux containers even when
+# the repository is checked out on Windows.
+*.sh text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.yaml text eol=lf
