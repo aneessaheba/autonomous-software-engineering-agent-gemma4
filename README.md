@@ -6,8 +6,8 @@ model that fits on one GPU. Built for Kaggle's
 (Google DeepMind, 2026), where a submission is scored by the share of hidden
 issues whose validation tests pass after the agent's patch is applied.
 
-The agent runs offline inside a sandbox with a 32,768-token context, 40 tool
-calls and 8 minutes per issue. It gets the issue text and a repository; it must
+The agent runs offline inside a sandbox with a 32,768-token context, 30 tool
+calls and 4.5 minutes per issue. It gets the issue text and a repository; it must
 find the fault, edit the code, verify, and submit a patch.
 
 ## Results so far
@@ -38,7 +38,7 @@ burns a small model's tool-call and context budget. The design follows from that
    ranges to read. One tool call replaces several rounds of `grep`.
 2. **Pinned issue text.** The issue is repeated at the end of the system prompt
    through ADK session state, so it survives the harness's context compaction.
-3. **Budget discipline in the prompt.** Edit by the twelfth tool call, verify
+3. **Budget discipline in the prompt.** Edit by the tenth tool call, verify
    once, submit; the working tree is graded even if the budget runs out.
 4. **LoRA fine-tuning** of Gemma 4 on agent trajectories is the next stage.
 

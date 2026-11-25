@@ -82,6 +82,14 @@ These are not in the published guide and each one would have cost a submission:
 - Whether `run_skill_script` counts against the tool-call budget. It is not
   wrapped by the harness's budget decorator in the source, which suggests not,
   but this is unverified until a local run.
-- Whether the scorer runs tasks concurrently. At 8 minutes per task the worst
-  case for 120 sequential tasks is 16 hours, above the 12-hour limit; public
-  notebooks with the same budget have scored, so the average is evidently lower.
+- How long model start-up and sandbox setup take on the scorer. They count
+  toward the 12-hour limit, so the per-task budget has to leave room for them.
+
+## Lessons from submissions
+
+- **An 8-minute per-task budget exceeds the 12-hour limit.** Submission
+  58763036 (2026-11-23) was rejected with "submission notebook exceeded the
+  allowed runtime" and received no score. Tasks evidently run one after
+  another, so 120 tasks at 8 minutes is 16 hours in the worst case. The budget
+  is now 4.5 minutes and 30 tool calls, and the validator rejects any config
+  whose worst case is above 10 hours.
