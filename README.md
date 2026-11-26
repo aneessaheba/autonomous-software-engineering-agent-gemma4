@@ -49,6 +49,7 @@ against a control:
 | :--- | :--- |
 | [agents/baseline](agents/baseline) | Prompt-only single agent, locates code with `git grep` |
 | [agents/locate](agents/locate) | Same agent, starts from the `repo-locate` skill |
+| [agents/locate-fast](agents/locate-fast) | The locate agent with a 1,024-token thinking budget, to fit more actions in the time limit |
 
 ## Repository layout
 

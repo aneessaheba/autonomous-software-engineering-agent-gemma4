@@ -93,3 +93,24 @@ These are not in the published guide and each one would have cost a submission:
   another, so 120 tasks at 8 minutes is 16 hours in the worst case. The budget
   is now 4.5 minutes and 30 tool calls, and the validator rejects any config
   whose worst case is above 10 hours.
+
+## Findings from the first GPU run (2026-11-25, RTX 5090, 3-task smoke tests)
+
+- **Time runs out before tool calls do.** Thinking turns of up to about 35
+  seconds consumed the 4.5-minute budget; one task timed out having used 16 of
+  30 calls. The scorer's L4 GPUs are slower than a 5090, so this will be worse
+  there. `agents/locate-fast` cuts the thinking budget from 4,096 to 1,024
+  tokens to test whether more, shorter turns resolve more issues.
+- **A timeout does not discard the work.** The harness diffs the working tree
+  when the session ends for any reason, so an empty patch after a timeout means
+  no source file had been edited yet, not that an edit was lost.
+- **The model uses the skill.** It called `run_skill_script` as its first
+  action on two of three tasks, with the right arguments and without
+  `load_skill`; the script ran in about 0.2 seconds. It split the query across
+  several quoted strings instead of one, which still worked.
+- **Environment:** transformers 5.13.1 from the organisers' wheelhouse needs
+  `huggingface-hub<2.0`; `setup.sh` now pins it. vLLM starts in about 2.5
+  minutes. The harness reports `total_tokens` as 0, so token use is not tracked.
+- Smoke results were 0 of 3 resolved for both variants, which says nothing
+  about the rate: the sample is three tasks.
+
