@@ -1,0 +1,10 @@
+# Short thinking. On the first GPU run, thinking turns of up to 35 seconds were
+# what exhausted the 4.5-minute task budget, not the tool-call limit: a task
+# timed out with 16 of 30 calls used. A 1,024-token thinking budget trades
+# deliberation for more actions inside the same wall-clock time.
+temperature: 0.2
+top_p: 0.95
+max_output_tokens: 4096
+thinking_config:
+  thinking_budget: 1024
+  include_thoughts: true
