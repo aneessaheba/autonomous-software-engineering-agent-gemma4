@@ -70,7 +70,7 @@ analysis done on a laptop. Today's goals, in order:
 | :--- | :--- |
 | Base model | `gemma-4-31b-it-qat-w4a16-ct`, version 2 on Kaggle Models |
 | Model size on disk | 23.3 GB |
-| GPU memory | An RTX 5090 has 32 GB; vLLM is set to use 90%, about 28.8 GB |
+| GPU memory | An RTX 5090 has 32 GB, about 2 GB of it held by the Windows display; vLLM at 90% fits, higher does not |
 | Competition data | about 22.5 GB, of which 21.5 GB is repository snapshots |
 | Free disk needed on C: | at least 80 GB |
 | Public tasks | 129 (fastapi 67, rich 48, requests 13, httpx 1) |
@@ -78,10 +78,9 @@ analysis done on a laptop. Today's goals, in order:
 | Agent variants | `agents/baseline` (prompt only), `agents/locate` (adds the `repo-locate` skill) |
 | Sandbox backend | `subprocess`: no Docker-in-Docker is needed |
 
-**The setup and evaluation scripts have never been run on a GPU, and never in
-this lab's container.** They were written on a Mac from the organisers' starter
-notebook. Expect at least one failure; the troubleshooting table lists the
-likely ones.
+The setup and evaluation scripts first ran in this lab's container on
+2026-11-25 and work as written here. Setup took about an hour; vLLM starts in
+about 2.5 minutes.
 
 ## Steps
 
@@ -89,8 +88,9 @@ likely ones.
 
 Follow steps 1 to 3 of the lab guide:
 
-1. Log in, start Docker Desktop, and load the `pytorch` image by double-clicking
-   it in `C:\DockerImages`.
+1. Log in and start Docker Desktop. Wait until it shows "Engine running", then
+   load the `pytorch` image by double-clicking it in `C:\DockerImages`. If
+   Docker Desktop is not running yet, the double-click fails without a message.
 2. Create a folder on the Desktop named after the owner. This is the working
    directory. Check in File Explorer that drive C: has at least 80 GB free.
 
@@ -103,10 +103,11 @@ All in the workstation's browser:
    result should be `Desktop\<name>\autonomous-software-engineering-agent-gemma4\`.
    Use the zip, not a `git clone` on Windows, so the shell scripts keep their
    Linux line endings.
-2. Open https://www.kaggle.com/settings, and under "API" click "Create New
-   Token". Move the downloaded `kaggle.json` into the Desktop folder.
-3. Open https://www.kaggle.com/models/google/gemma-4 and accept the licence if
-   the page asks. Without this the model download fails with a 403.
+2. Open https://www.kaggle.com/settings and under "API" click "Generate New
+   Token". Save the token string as a file named `access_token` in the Desktop
+   folder. Do not use "Create Legacy API Key": it expires the owner's existing
+   keys on other machines.
+3. The Gemma 4 model page needs no licence step (Apache 2.0).
 
 ### Step 3: start the container
 
@@ -120,7 +121,8 @@ docker run --gpus all --ipc=host -p 8888:8888 -v "C:\Users\<user>\Desktop\<name>
 This is the lab guide's command with one addition, `--ipc=host`, which gives
 the model server enough shared memory. Leave this window open for the whole
 session; closing it stops the container. Open the Jupyter link it prints, then
-choose New > Terminal. All later commands go in that Jupyter terminal.
+choose New > Terminal. The terminal starts in `sh`; type `bash` first. All later
+commands go in that Jupyter terminal.
 
 ### Step 4: check the container
 
@@ -133,15 +135,15 @@ ls /app
 ```
 
 Confirm: an RTX 5090 with about 32 GB is listed, `/app` shows the project
-folder and `kaggle.json`, and there is at least 80 GB free on `/app`. Note the
+folder and `access_token`, and there is at least 80 GB free on `/app`. Note the
 Python version and total memory; the owner should paste this output.
 
 ### Step 5: install the Kaggle key inside the container
 
 ```bash
 mkdir -p ~/.kaggle
-cp /app/kaggle.json ~/.kaggle/
-chmod 600 ~/.kaggle/kaggle.json
+cp /app/access_token ~/.kaggle/
+chmod 600 ~/.kaggle/access_token
 ```
 
 ### Step 6: one-time setup
@@ -261,9 +263,9 @@ gemma-swe report runs/baseline-v1 runs/locate-v1 --out results/local_eval.md
 | Symptom | What to try |
 | :--- | :--- |
 | `bash\r: command not found` or `$'\r'` errors | The scripts got Windows line endings. Run `sed -i 's/\r$//' scripts/gpu/*.sh` |
-| `403` downloading the model | Accept the Gemma 4 licence on the Kaggle model page (step 2) |
+| `401` or `403` from Kaggle | Check `~/.kaggle/access_token` exists inside the container and that the token was not expired |
 | Container cannot see the GPU | Restart Docker Desktop, or the machine as the lab guide suggests, then repeat step 3 |
-| vLLM runs out of GPU memory at start-up | The weights are 23.3 GB of a 28.8 GB allowance. Append `--gpu-memory-utilization 0.95` to the `run_eval.sh` command. As a fallback use the 12B model: copy an agent folder, change `model:` to `gemma-4-12b-it-qat-w4a16-ct`, download it with `MODEL=gemma-4-12b-it-qat-w4a16-ct bash scripts/gpu/setup.sh`, and state clearly in the results that 12B was used |
+| vLLM runs out of GPU memory at start-up | The Windows display already holds about 2 GB of the 32 GB, so the default 0.90 fits and anything higher does not; do not raise it. Use the 12B model instead: copy an agent folder, change `model:` to `gemma-4-12b-it-qat-w4a16-ct`, download it with `MODEL=gemma-4-12b-it-qat-w4a16-ct bash scripts/gpu/setup.sh`, and state clearly in the results that 12B was used |
 | vLLM is killed while loading, or the container exits | Docker Desktop's memory limit may be below what the 23 GB model needs. Report `free -g` to the owner; the limit is a machine setting that only lab staff may change, so fall back to the 12B model |
 | vLLM does not know the `gemma4` tool or reasoning parser | The PyPI build differs from the organisers' wheel. Check that the `--force-reinstall vendor/wheelhouse/*.whl` line in `setup.log` ran without errors |
 | A wheel is "not a supported wheel on this platform" | The wheelhouse targets Python 3.12 on Linux x86_64. Check `/opt/venv/bin/python --version`; delete wheels that do not apply and re-run |
