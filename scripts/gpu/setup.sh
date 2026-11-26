@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# One-time setup of a Linux CUDA machine (intended target: a single RTX 5090, 32 GB)
+# One-time setup of a Linux CUDA machine (run on a single RTX 5090, 32 GB, inside the lab's PyTorch container)
 # for local evaluation and LoRA training. Run from the repository root.
 # Works on bare Linux and inside a Linux container (see docs/lab-runbook.md).
 #
-# Requires: NVIDIA driver with CUDA 12.8 support, uv, and Kaggle API credentials
-# in ~/.kaggle (the account must have accepted the competition rules).
+# Requires: NVIDIA driver with CUDA 12.8 support and Kaggle API credentials in
+# ~/.kaggle (kaggle.json or access_token) for an account that joined the competition.
 set -euo pipefail
 
 MODEL="${MODEL:-gemma-4-31b-it-qat-w4a16-ct}"
@@ -42,6 +42,8 @@ done
 uv pip install "vllm==0.19.1" "google-adk==1.36.1" litellm docker networkx cachetools \
   python-dotenv pyarrow peft accelerate
 uv pip install --no-deps --force-reinstall "$WHEELHOUSE"/*.whl
+# The pinned transformers 5.13.1 rejects huggingface-hub 2.x, which PyPI pulls in above.
+uv pip install "huggingface-hub>=1.5.0,<2.0"
 
 # 3. Competition data: everything, including the 21.5 GB of repository snapshots.
 gemma-swe download core graphs embeddings wheels snapshots
