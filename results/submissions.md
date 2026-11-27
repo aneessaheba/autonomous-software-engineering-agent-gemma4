@@ -6,3 +6,4 @@ identifies the exact agent config that was scored.
 | Date (UTC) | Kaggle ref | Variant | Git commit | Content SHA-256 (first 12) | Public score | Notes |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | 2026-11-23 | 58763036 | `agents/baseline` | 2b3555a | a1b56cf335a9 | failed | Rejected: run exceeded Kaggle's 12 h limit. Budget was 40 calls / 8 min per task; cut to 30 calls / 4.5 min afterwards |
+| 2026-11-27 | 58980966 | `agents/locate` | a1d38d7 | 9d09a8615821 | pending | Skill variant, Gemma 4 31B, 30 calls / 4.5 min per task; 10 of 43 on local shard 0 |
