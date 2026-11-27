@@ -1,0 +1,8 @@
+# Same 4.5-minute cap as before, so the worst-case run time is unchanged. On the
+# first 43-task run, 14 tasks used all 30 calls while only 2 ran out of time, so
+# the call limit is raised to 40; the time cap still bounds the run.
+evaluation:
+  timeout_seconds: 120
+  max_tool_calls: 40
+  max_time_minutes: 4.5
+  max_turns: 80

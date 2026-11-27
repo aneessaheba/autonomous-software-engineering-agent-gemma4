@@ -11,16 +11,18 @@ query. It takes under a second and never modifies the repository.
 
 ## How to run
 
-Call `run_skill_script` with:
+Call `run_skill_script` with exactly these three arguments. A call that leaves
+out `skill_name` or `file_path` is rejected.
 
 - `skill_name`: `repo-locate`
 - `file_path`: `scripts/locate.py`
-- `args`: a list holding exactly one string, the query. Put all search words in
-  that single string, separated by spaces, with no quotation marks inside it.
+- `args`: a list holding one string, the query, for example
+  `["APIKeyQuery auto_error missing key 403"]`
 
-The query should contain the identifiers, error messages and key phrases from
-the issue: class, function and parameter names, option names, exception text.
-More specific words give better results. Copy them from the issue; do not guess.
+Put all search words in that one string, separated by spaces, with no quotation
+marks inside it. Use the identifiers, error messages and key phrases from the
+issue: class, function and parameter names, option names, exception text. Copy
+them from the issue; do not guess.
 
 ## Reading the output
 

@@ -1,9 +1,0 @@
-# Per-task budgets. Kaggle allows 12 hours for the whole run: about 120 hidden
-# tasks plus model start-up and sandbox setup. An 8-minute budget exceeded that
-# limit (submission 58763036), so each task now gets 4.5 minutes, which keeps
-# the worst case near 9 hours of agent time.
-evaluation:
-  timeout_seconds: 120
-  max_tool_calls: 30
-  max_time_minutes: 4.5
-  max_turns: 60

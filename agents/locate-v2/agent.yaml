@@ -2,7 +2,7 @@
 # Compiled by adk-submission into a Google ADK LlmAgent; no Python is executed.
 name: swe_agent
 model: gemma-4-31b-it-qat-w4a16-ct
-description: The locate agent with a short thinking budget, so more actions fit in the time limit.
+description: The locate agent with an unambiguous skill call, a rule for new public names, and 40 tool calls.
 instruction: !include prompts/system.md
 tools:
   - run_command
