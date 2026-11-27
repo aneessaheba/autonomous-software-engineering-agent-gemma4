@@ -12,8 +12,12 @@ AGENT_DIR="${1:?usage: run_eval.sh <agent-dir> <run-name> [local_eval options]}"
 RUN_NAME="${2:?usage: run_eval.sh <agent-dir> <run-name> [local_eval options]}"
 shift 2
 
+# Find the environment: VENV_DIR if set, else ./.venv, else the lab container's /opt/venv.
+if [ -z "${VENV_DIR:-}" ]; then
+  if [ -f .venv/bin/activate ]; then VENV_DIR=.venv; else VENV_DIR=/opt/venv; fi
+fi
 # shellcheck disable=SC1091
-source "${VENV_DIR:-.venv}/bin/activate"
+source "$VENV_DIR/bin/activate"
 gemma-swe validate "$AGENT_DIR"
 
 RESULTS="runs/$RUN_NAME"
