@@ -19,7 +19,9 @@ find the fault, edit the code, verify, and submit a patch.
 | Fault localization, correct file ranked first | 48.4% with the `repo-locate` skill vs 31.2% for identifier grep | [results/localization.md](results/localization.md) |
 | Fault localization, correct file in top 5 | 75.0% vs 50.8% | [results/localization.md](results/localization.md) |
 | Function-level: a printed line range overlaps the fix (top 5 files) | 70.3% | [results/localization.md](results/localization.md) |
-| Resolution rate on public tasks and leaderboard | not yet measured | pending first GPU run |
+| Resolution rate, 43-task shard, official harness on an RTX 5090 | 23.3% (10 of 43; 95% CI 13.2 to 37.7%) for both baseline and skill variant | [results/local_eval_shard0.md](results/local_eval_shard0.md) |
+| Timeouts on that shard | 2 with the `repo-locate` skill vs 8 without | [results/local_eval_shard0.md](results/local_eval_shard0.md) |
+| Full 129-task comparison and Kaggle leaderboard score | not yet measured | runs in progress |
 
 The localization numbers use the full issue text as the query and the directory
 prior was chosen on the same 129 tasks, so they are an upper estimate of what
@@ -49,7 +51,8 @@ against a control:
 | :--- | :--- |
 | [agents/baseline](agents/baseline) | Prompt-only single agent, locates code with `git grep` |
 | [agents/locate](agents/locate) | Same agent, starts from the `repo-locate` skill |
-| [agents/locate-fast](agents/locate-fast) | The locate agent with a 1,024-token thinking budget, to fit more actions in the time limit |
+| [agents/locate-v2](agents/locate-v2) | Fixes found in the first GPU run: unambiguous skill call, a rule for new public names, 40 tool calls. Not yet evaluated |
+| [agents/locate-v2-fast](agents/locate-v2-fast) | `locate-v2` with a 1,024-token thinking budget. Not yet evaluated |
 
 ## Repository layout
 
@@ -63,6 +66,7 @@ src/gemma_swe/
   kaggle_data.py   Download competition data
   worktrees.py     Extract Python sources from repository snapshots
   local_eval.py    Run the official two-phase evaluation on a GPU machine
+  gold_replay.py   Replay reference patches to find which tasks are solvable
   analysis/        Dataset statistics, localization benchmark, run reports
 scripts/gpu/       Setup and evaluation scripts for a CUDA machine
 results/           Tracked numbers (JSON and Markdown)
