@@ -99,7 +99,7 @@ These are not in the published guide and each one would have cost a submission:
 - **Time runs out before tool calls do.** Thinking turns of up to about 35
   seconds consumed the 4.5-minute budget; one task timed out having used 16 of
   30 calls. The scorer's L4 GPUs are slower than a 5090, so this will be worse
-  there. `agents/locate-fast` cuts the thinking budget from 4,096 to 1,024
+  there. `agents/locate-v2-fast` cuts the thinking budget from 4,096 to 1,024
   tokens to test whether more, shorter turns resolve more issues.
 - **A timeout does not discard the work.** The harness diffs the working tree
   when the session ends for any reason, so an empty patch after a timeout means
@@ -113,4 +113,24 @@ These are not in the published guide and each one would have cost a submission:
   minutes. The harness reports `total_tokens` as 0, so token use is not tracked.
 - Smoke results were 0 of 3 resolved for both variants, which says nothing
   about the rate: the sample is three tasks.
+
+## Findings from the first 43-task comparison (2026-11-26)
+
+Numbers are in `results/local_eval_shard0.md`. What they changed:
+
+- **`run_skill_script` does count against the tool-call budget** when the call
+  is valid. Rejected calls do not.
+- **The model often calls the skill wrongly.** 22 of 53 calls were rejected,
+  mostly for leaving out `skill_name` and `file_path`. A prose description of
+  the call was not enough; `locate-v2` lists the three arguments explicitly.
+- **Some public tasks cannot be solved in the sandbox.** Their hidden tests
+  import `inline_snapshot`, `dirty_equals` or `orjson`, which are not among the
+  124 provided wheels. A static check flags 27 of the 129 tasks, all fastapi.
+  Local resolution rates therefore have a ceiling well below 100%, and
+  `gemma_swe.gold_replay` measures it by running the reference patches through
+  the verification phase. Replaying on macOS is only indicative, because the
+  Linux wheels do not install there; run it in the Linux container.
+- **Hidden tests import new names directly.** When an issue asks for a new
+  class, constant or script, the agent must use the exact name and location, or
+  every test fails at import.
 

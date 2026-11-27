@@ -164,8 +164,9 @@ competition data (22.5 GB) and the model (23.3 GB). Expect 30 to 90 minutes. It
 finishes by printing the vLLM and torch versions and the GPU name. If it fails,
 fix the script and run the same command again; completed downloads are skipped.
 
-In every new terminal, run the first two lines again (`cd ...` and `export
-VENV_DIR=/opt/venv`) before anything else.
+In every new terminal, type `bash`, then run the `cd ...` line again.
+`run_eval.sh` finds `/opt/venv` by itself; for `gemma-swe` commands run
+`source /opt/venv/bin/activate` first.
 
 ### Step 7: smoke test on three tasks
 
