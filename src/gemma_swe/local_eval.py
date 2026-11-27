@@ -62,6 +62,28 @@ def _done_ids(results_path: Path) -> set[str]:
     }
 
 
+def _trace_tokens(result, results_dir: Path, instance_id: str) -> dict:
+    """Token totals from the saved trace; the harness leaves ``total_tokens`` at 0."""
+    candidates = [
+        getattr(result, "trace_path", None),
+        results_dir / "traces" / f"trace_{instance_id}.json",
+    ]
+    for path in candidates:
+        try:
+            metrics = json.loads(Path(path).read_text()).get("final_metrics") or {}
+        except (TypeError, OSError, ValueError):
+            continue
+        prompt = metrics.get("total_prompt_tokens") or 0
+        completion = metrics.get("total_completion_tokens") or 0
+        if prompt or completion:
+            return {
+                "prompt_tokens": prompt,
+                "completion_tokens": completion,
+                "total_tokens": prompt + completion,
+            }
+    return {}
+
+
 def run(args: argparse.Namespace) -> int:
     for key, value in ENV_DEFAULTS.items():
         os.environ.setdefault(key, value)
@@ -191,6 +213,7 @@ def run(args: argparse.Namespace) -> int:
                 "llm_calls": getattr(result, "total_llm_calls", None),
                 "error": getattr(result, "error_message", None),
             }
+            row.update(_trace_tokens(result, results_dir, task.instance_id))
             with open(results_path, "a") as fh:
                 fh.write(json.dumps(row) + "\n")
             (results_dir / "patches").mkdir(exist_ok=True)
