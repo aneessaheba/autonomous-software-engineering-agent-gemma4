@@ -54,11 +54,19 @@ def _cmd_localize(args: argparse.Namespace) -> int:
 def _cmd_report(args: argparse.Namespace) -> int:
     from gemma_swe.analysis import run_report
 
-    runs = {Path(d).name: run_report.load_rows(d) for d in args.results_dirs}
+    # "a+b+c" merges shard directories into one run named after the first.
+    runs = {}
+    for spec in args.results_dirs:
+        dirs = spec.split("+")
+        name = Path(dirs[0]).name if len(dirs) == 1 else Path(dirs[0]).name + "+"
+        runs[name] = [row for d in dirs for row in run_report.load_rows(d)]
+    solvable = run_report.load_solvable(args.gold) if args.gold else None
     out = []
-    for name, rows in runs.items():
-        summary = run_report.summarise(rows)
-        (Path("runs") / name / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+    for spec, (name, rows) in zip(args.results_dirs, runs.items(), strict=True):
+        summary = run_report.summarise(rows, solvable)
+        first_dir = Path(spec.split("+")[0])
+        suffix = "summary.json" if "+" not in spec else "summary_merged.json"
+        (first_dir / suffix).write_text(json.dumps(summary, indent=2) + "\n")
         out.append(run_report.to_markdown(name, summary))
     names = list(runs)
     for other in names[1:]:
@@ -126,7 +134,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=_cmd_localize)
 
     p = sub.add_parser("report", help="Summarise and compare local evaluation runs")
-    p.add_argument("results_dirs", nargs="+", help="Run directories; the first is the base")
+    p.add_argument(
+        "results_dirs",
+        nargs="+",
+        help="Run directories; the first is the base. Join shards with +, e.g. runs/a-s0+runs/a-s1",
+    )
+    p.add_argument("--gold", help="gold_replay results dir: also report on solvable tasks only")
     p.add_argument("--out", help="Write the markdown report here")
     p.set_defaults(func=_cmd_report)
 
